@@ -25,18 +25,24 @@ useful and does not learn it back.
 1. On GitHub, open `pouyan1361/governed-ml-midterm` and click **Fork**. Keep
    the name. Create the fork under your own account.
 2. On YOUR fork, click the green **Code** button, choose the **Codespaces**
-   tab, click **Create codespace on main**. Wait for the setup message in the
-   terminal (about two minutes).
-3. In the Codespace terminal, run:
+   tab, click **Create codespace on main**.
+3. **Wait for the line `Setup complete` in the terminal** (about two minutes).
+   The Python packages install in the background after the editor opens.
+   Do not type anything before that line appears.
+4. In the Codespace terminal, run:
 
        python -m pytest -q tests/test_lab1_compliance.py
 
    You should see **4 failed, 7 passed**. That is the correct starting point.
-   If you see `ModuleNotFoundError: No module named 'pandas'`, the setup had
-   not finished: run `pip install -r requirements.txt`, wait a minute, and run
-   the test again.
-   If a Codespace is stuck on "Opening Remote" for more than three minutes,
-   delete it from the Codespaces tab and create a new one.
+5. **If instead you see `ModuleNotFoundError: No module named 'pandas'`**, the
+   setup did not finish. Install the packages yourself, wait for it to end
+   (about a minute), then run the test again:
+
+       pip install -r requirements.txt
+       python -m pytest -q tests/test_lab1_compliance.py
+
+6. If a Codespace is stuck on "Opening Remote" for more than three minutes,
+   delete it from the Codespaces tab on your fork and create a new one.
 
 ## The files
 
