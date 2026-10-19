@@ -32,6 +32,9 @@ useful and does not learn it back.
        python -m pytest -q tests/test_lab1_compliance.py
 
    You should see **4 failed, 7 passed**. That is the correct starting point.
+   If you see `ModuleNotFoundError: No module named 'pandas'`, the setup had
+   not finished: run `pip install -r requirements.txt`, wait a minute, and run
+   the test again.
    If a Codespace is stuck on "Opening Remote" for more than three minutes,
    delete it from the Codespaces tab and create a new one.
 
