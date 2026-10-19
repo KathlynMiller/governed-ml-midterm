@@ -1,0 +1,8 @@
+# Governance files need the policy owner's review before they can merge.
+# In this course the Model Risk Officer is the instructor.
+governance/           @pouyan1361
+src/gate.py           @pouyan1361
+tests/                @pouyan1361
+ci/                   @pouyan1361
+.github/              @pouyan1361
+data/                 @pouyan1361

@@ -1,0 +1,9 @@
+{
+  "model_version": "v1",
+  "author": "Sierra Underwriting Analytics",
+  "description": "Baseline logistic regression on declared application fields only.",
+  "model_type": "logistic_regression",
+  "params": {},
+  "features": ["years_licensed", "vehicle_age", "vehicle_value", "annual_mileage_declared", "prior_insurer_years", "prior_claims_3y"],
+  "decision_threshold": 0.5
+}

@@ -1,0 +1,24 @@
+field,description,when_recorded,source,class
+policy_id,Internal policy identifier,at application,Sierra systems,key
+applicant_name,Applicant full name,at application,application form,identifier
+drivers_license_no,Driver license number,at application,application form,identifier
+email,Contact email,at application,application form,identifier
+phone,Contact phone,at application,application form,identifier
+street_address,Street address,at application,application form,identifier
+zip,ZIP code of garaging address,at application,application form,quasi-identifier
+date_of_birth,Applicant date of birth,at application,application form,quasi-identifier
+gender,Applicant gender as declared,at application,application form,sensitive
+area,Garaging area classification (urban or rural),at application,Sierra geocoding,sensitive
+years_licensed,Years since first license,at application,DMV record,declared
+vehicle_age,Vehicle age in years,at application,VIN lookup,declared
+vehicle_value,Estimated vehicle value in USD,at application,VIN lookup,declared
+vehicle_class,Vehicle body class,at application,VIN lookup,declared
+annual_mileage_declared,Annual mileage declared by applicant,at application,application form,declared
+prior_insurer_years,Years continuously insured with prior carrier,at application,prior carrier letter,declared
+coverage_type,Coverage requested (basic standard full),at application,application form,declared
+prior_claims_3y,At-fault claims in the 3 years before the history window,at application,industry claims database,declared
+territory_risk_index,Vendor risk index for garaging territory,at application,third-party vendor,vendor
+claim_paid_amount,Total paid on at-fault claims during the policy year,after policy year,claims system,outcome
+adjuster_fraud_review,Policy referred to fraud review by an adjuster during a claim,after policy year,claims system,outcome
+renewal_offered,Whether Sierra offered renewal at the end of the term,end of policy year,policy admin system,business
+claim_free,Label: 1 if no at-fault claim during the policy year,after policy year,claims system,label
