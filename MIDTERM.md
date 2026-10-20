@@ -57,31 +57,48 @@ Three suspect columns. For each, give your ruling and the evidence.
 
 ## Lab 4: Run v1 and v2, explain the block
 
-**4.1** Both normal runs passed Stage 0 (18 tests). v1 (logistic regression, six features) had overall AUC 0.7046; rural AUC/approval/TPR/FPR were 0.6617/0.7749/0.8647/0.6860 and urban values were 0.6960/0.8951/0.9430/0.7277. Its approval-disparity, TPR, and FPR ratios were 0.8657/0.9170/0.9427; `DECISION: PASS`. v2 (gradient boosting, seven features) had overall AUC 0.7224; rural AUC/approval/TPR/FPR were 0.5937/0.5146/0.5588/0.4709 and urban values were 0.6835/0.9196/0.9490/0.8168. Its ratios were 0.5596/0.5888/0.5765; `DECISION: BLOCKED`.
+**4.1** Both normal runs passed Stage 0 (18 tests). v1 (logistic regression, six features) had overall AUC 0.7046; rural AUC/approval/TPR/FPR were 0.6617/0.7749/0.8647/0.6860 and urban values were 0.6960/0.8951/0.9430/0.7277. Its approval-disparity and TPR ratios were 0.8657/0.9170; its FPR ratio was 0.9427 against the new 0.75 minimum, so `fpr_ratio` passes. `DECISION: PASS`. v2 (gradient boosting, seven features) had overall AUC 0.7224; rural AUC/approval/TPR/FPR were 0.5937/0.5146/0.5588/0.4709 and urban values were 0.6835/0.9196/0.9490/0.8168. Its ratios were 0.5596/0.5888/0.5765; the FPR ratio 0.5765 is below 0.75. `DECISION: BLOCKED`.
 
-**4.2** The key config difference is that v2 adds `territory_risk_index` and uses gradient boosting. The index is generated as `42 + 30 * rural + noise` at `data/generate_data.py:136`, so it acts as a rural proxy; the historical label applies an unjustified rural penalty (`-1.10 * rural`) at `data/generate_data.py:132`. v2's overall AUC is higher (0.7224 vs. 0.7046), but it fails rural AUC at 0.5937 vs. 0.64 (0.0463 below), rural TPR at 0.5588 vs. 0.70 (0.1412 below), approval disparity at 0.5596 vs. 0.80 (0.2404 below), and TPR ratio at 0.5888 vs. 0.80 (0.2112 below).
+**4.2** Compared with v1, v2 adds `territory_risk_index` (and changes the algorithm to gradient boosting). The generator lines are:
 
-**4.3** The preventive check only asks whether a feature's name appears in the prohibited list. `territory_risk_index` is not listed, so it passes, even though it tracks rurality. The detective checks compare model outcomes for rural and urban drivers; they catch the harm: rural AUC is 0.5937 (below 0.64), rural TPR is 0.5588 (below 0.70), approval disparity is 0.5596 (below 0.80), and the TPR ratio is 0.5888 (below 0.80). The name check screens known prohibited inputs; group outcome checks reveal proxy effects the list cannot anticipate.
+```python
+logit = 1.35 + z - 1.10 * rural + rng.normal(0, 1.05, n)
+territory_risk_index = np.clip(42 + 30 * rural + rng.normal(0, 8, n), 0, 100).round(1)
+```
+
+The `-1.10 * rural` term lowers the label's logit for rural drivers, reducing their chance of `claim_free=1`. The index adds 30 points for rural status plus noise, so it largely encodes the same rural signal. v2's overall AUC is higher (0.7224 vs. 0.7046), but it fails rural AUC at 0.5937 vs. 0.64 (0.0463 below), rural TPR at 0.5588 vs. 0.70 (0.1412 below), approval disparity at 0.5596 vs. 0.80 (0.2404 below), TPR ratio at 0.5888 vs. 0.80 (0.2112 below), and FPR ratio at 0.5765 vs. 0.75 (0.1735 below).
+
+**4.3** The preventive check only compares configured feature names with the prohibited-name list; because `territory_risk_index` is absent from that list, `no_prohibited_features` passes. The detective checks can see its proxy effect because they measure results by rural and urban group: rural AUC and TPR are below their thresholds, as are approval disparity (0.5596 vs. 0.80), TPR ratio (0.5888 vs. 0.80), and FPR ratio (0.5765 vs. 0.75). A name list can catch known forbidden columns, but only the group-outcome checks reveal that an allowed-named feature leads to disparate outcomes.
 
 ---
 
 ## Lab 5: Change the governance
 
-**5.1** Not completed: I have not added `min_fpr_ratio` or selected a threshold in `governance/policy.json`.
+**5.1** I added `min_fpr_ratio: 0.75` and bumped `policy_version` from 1.0 to 1.1. I selected 0.75 within the slides' defensible 0.70-0.80 range as a minimum fairness standard before rerunning a model under the new control; it is not set to make every model pass.
 
-**5.2** No threshold value has been chosen, so there is no selected value to defend. A false positive is a driver who would remain claim-free but is routed away from the standard rate; this can cost Sierra Mutual a customer and unfairly burden the driver with manual review or a higher rate. Unequal FPR means similarly situated drivers who would file a claim are treated differently by area, creating unequal access and burdens as well as different business costs.
+**5.2** TPR parity and FPR parity together express equalized odds: the model should be similarly right and similarly wrong for each group. A false positive can cost Sierra Mutual a claim-free customer. It also unfairly treats the stricter group: a lower FPR means claim-filing drivers in that group are declined more often than comparable drivers in the other group. A 0.75 minimum FPR ratio allows some difference while preventing one group's FPR from falling below three-quarters of the other's; 0.50 would be too permissive, while 0.95 could block reasonable models.
 
-**5.3** Not completed: `test_gate_blocks_fpr_gap` still calls `pytest.skip`. The intended test should prove directly that `run_gate` blocks an FPR ratio below the policy threshold and passes one at or above it; running the pipeline alone would not isolate or verify both sides of that gate rule.
+**5.3** The pipeline displays the FPR check for one model's observed metrics. `test_gate_blocks_fpr_gap` separately feeds the gate a known-bad ratio (`threshold - 0.10`) and a known-good boundary ratio (exactly the threshold), asserting `BLOCKED` and `PASS`. That proves the check itself enforces the boundary rather than only showing that one model happened to pass or fail.
 
 ---
 
 ## Lab 6: Beat the gate
 
-**6.1** There is no final v3 gate result: `model_config.json` is still a placeholder and no engineered features are implemented. The diagnostic v2 run (with tests bypassed) reported overall AUC 0.7224, disparity ratio 0.5596, TPR ratio 0.5888, FPR ratio 0.5765, and `DECISION: BLOCKED`.
+**6.1** Experiment log so far:
 
-**6.2** None. `src/features.py` currently reports zero implemented features, and the model config contains only non-engineered features, so there is no feature-importance comparison to report.
+| Trial | Change from prior candidate | Overall AUC | Decision |
+|---|---|---:|---|
+| Baseline | v1-like declared fields, logistic regression | 0.7046 | PASS |
+| A | Added `claims_per_month` and `months_since_last_claim` | 0.7182 | PASS |
+| B | Added `speeding_velocity` | 0.7344 | PASS |
+| C | Added `miles_volatility` | 0.7342 | PASS |
+| D | Candidate with `max_hard_brakes_per_1k` and `speeding_velocity` plus declared fields | 0.8037 | PASS |
 
-**6.3** Yes. The diagnostic v2 config includes `territory_risk_index`; with tests bypassed, overall AUC rose from v1's 0.7046 to 0.7224, but v2 was blocked for poor rural subgroup results and disparate approvals. A higher average score does not make a model deployable when it fails governance and fairness checks.
+Current best is Trial D. It has disparity ratio 0.8797, TPR ratio 0.9777, and FPR ratio 0.9190; its decision line is `DECISION: PASS. This model may proceed to deployment review.`
+
+**6.2** The current best uses `max_hard_brakes_per_1k` (extremes) and `speeding_velocity` (velocity). These two together are the best tested feature set so far; their individual effects have not yet been isolated in ablation runs.
+
+**6.3** I have not yet run the v3 config with `territory_risk_index`; I will test it once as a proxy-risk experiment and not keep it if it fails the gate.
 
 ---
 
@@ -281,6 +298,56 @@ families: ['extremes', 'frequency', 'ratio', 'recency', 'trend', 'velocity', 'vo
 
 ### 2026-10-20
 
+**Change:** Added the exact v2 proxy and rural-penalty source lines to the Lab 4 explanation and clarified preventive versus detective checks.
+
+**Command:** Not run (documentation-only change).
+
+### 2026-10-20
+
 **Change:** Reworded the Lab 4.3 explanation to distinguish the name-based preventive check from group-outcome detective checks.
 
 **Command:** Not run (documentation-only change).
+
+### 2026-10-20
+
+**Change:** Added the conditional FPR-ratio gate check, set `min_fpr_ratio` to 0.75, and bumped policy version to 1.1; completed Lab 5 answers.
+
+**Command:** `python -m pytest -q tests/test_lab5_gate.py`
+
+**Terminal output:**
+
+```text
+.....                                                                    [100%]
+5 passed in 1.38s
+```
+
+### 2026-10-20
+
+**Change:** Clarified the Lab 5 FPR harms and the difference between pipeline evidence and a controlled gate test.
+
+**Command:** `python -m pytest -q tests/`
+
+**Terminal output:**
+
+```text
+2 failed, 25 passed
+Failures: test_author_is_filled_in; test_model_uses_engineered_features
+```
+
+**Changed files:** `git diff --name-only` listed `MIDTERM.md`, `governance/policy.json`, `src/gate.py`, and `tests/test_lab5_gate.py`; `src/features.py` had no outstanding diff.
+
+### 2026-10-20
+
+**Change:** Updated Lab 4 to include the new FPR gate result under policy v1.1.
+
+**Commands:** `python run_pipeline.py --config configs/v1.json`; `python run_pipeline.py --config configs/v2.json`
+
+**Results:** v1 FPR ratio 0.9427 >= 0.75, `fpr_ratio` pass, `DECISION: PASS`. v2 FPR ratio 0.5765 < 0.75, `fpr_ratio` fail added to reasons, `DECISION: BLOCKED`.
+
+### 2026-10-20
+
+**Change:** Began Lab 6 model selection: filled model author, recorded baseline and feature trials, and selected the best passing candidate observed so far.
+
+**Commands:** `python run_pipeline.py` after each config edit.
+
+**Results:** Baseline 0.7046 PASS; frequency+recency 0.7182 PASS; plus velocity 0.7344 PASS; plus volatility 0.7342 PASS; declared fields plus hard-braking extremes and speeding velocity 0.8037 PASS.
